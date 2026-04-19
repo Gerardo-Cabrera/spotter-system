@@ -1,0 +1,63 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Spotter — local development stack.
+#   docker compose up --build
+#
+# Frontend  → http://localhost:5173
+# Backend   → http://localhost:8000
+# Postgres  → localhost:5432  (spotter / spotter / spotter)
+# ────────────────────────────────────────────────────────────────────────────
+name: spotter
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spotter
+      POSTGRES_USER: spotter
+      POSTGRES_PASSWORD: spotter
+    ports:
+      - "5432:5432"
+    volumes:
+      - spotter_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spotter -d spotter"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: dev-insecure-change-me
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: "*"
+      DATABASE_URL: postgres://spotter:spotter@db:5432/spotter
+      DATABASE_SSL_REQUIRE: "False"
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      NOMINATIM_USER_AGENT: "SpotterTripPlanner/1.0 (dev@localhost)"
+      PORT: "8000"
+      WEB_CONCURRENCY: "2"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  spotter_pgdata:
