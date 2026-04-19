@@ -64,10 +64,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "spotter.wsgi.application"
 
-# Database — Postgres via DATABASE_URL, SQLite fallback for local/dev.
+# Database — Postgres via DATABASE_URL, SQLite fallback for local/dev & CI.
+# `os.getenv(..., default)` only returns `default` when the variable is
+# *unset*; an explicitly empty value (e.g. `DATABASE_URL=""` in a CI job)
+# would still be returned as "" and break `dj_database_url.parse`. The
+# `or` guard collapses both cases to the SQLite fallback.
+_DATABASE_URL = os.getenv("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
 DATABASES = {
-    "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+    "default": dj_database_url.parse(
+        _DATABASE_URL,
         conn_max_age=600,
         ssl_require=os.getenv("DATABASE_SSL_REQUIRE", "False").lower() == "true",
     )
