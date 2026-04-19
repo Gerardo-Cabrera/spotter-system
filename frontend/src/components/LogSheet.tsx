@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { DailyLog, DailyLogEntry } from "../types";
 
 /**
@@ -37,10 +38,9 @@ function hoursToHHMM(h: number): string {
 
 function buildPath(entries: DailyLogEntry[]): string {
   if (!entries.length) return "";
-  const sorted = [...entries].sort((a, b) => a.start_hour - b.start_hour);
   let d = "";
   let prevY: number | null = null;
-  for (const e of sorted) {
+  for (const e of entries) {
     const x1 = xForHour(e.start_hour);
     const x2 = xForHour(e.end_hour);
     const y = yForRow(e.status_row);
@@ -56,10 +56,9 @@ function buildPath(entries: DailyLogEntry[]): string {
 }
 
 function Remarks({ entries }: { entries: DailyLogEntry[] }) {
-  const sorted = [...entries].sort((a, b) => a.start_hour - b.start_hour);
   return (
     <>
-      {sorted.map((e, i) => {
+      {entries.map((e, i) => {
         if (i === 0) return null;
         const x = xForHour(e.start_hour);
         const city = shortLocation(e.location_name);
@@ -97,12 +96,17 @@ function shortLocation(loc: string): string {
 }
 
 export default function LogSheet({ log }: { log: DailyLog }) {
-  const pathD = buildPath(log.entries);
-  const changePoints = [...log.entries]
-    .sort((a, b) => a.start_hour - b.start_hour)
-    .slice(1)
-    .map((e) => ({ x: xForHour(e.start_hour), y: yForRow(e.status_row) }));
-  const last = [...log.entries].sort((a, b) => a.end_hour - b.end_hour).pop();
+  // Sort entries exactly once per render and derive every geometry from it.
+  const entries = useMemo(
+    () => [...log.entries].sort((a, b) => a.start_hour - b.start_hour),
+    [log.entries],
+  );
+  const pathD = useMemo(() => buildPath(entries), [entries]);
+  const changePoints = useMemo(
+    () => entries.slice(1).map((e) => ({ x: xForHour(e.start_hour), y: yForRow(e.status_row) })),
+    [entries],
+  );
+  const last = entries.length ? entries.reduce((a, b) => (a.end_hour > b.end_hour ? a : b)) : undefined;
 
   const totals = log.totals_hours;
   const totalOnDuty = (totals.driving ?? 0) + (totals.on_duty ?? 0);
@@ -126,7 +130,7 @@ export default function LogSheet({ log }: { log: DailyLog }) {
 
         {/* Info block */}
         <g fontSize={11} fill="#1f2937">
-          <text x={20} y={78}>From: <tspan fontWeight={600}>{shortLocation(log.entries[0]?.location_name ?? "")}</tspan></text>
+          <text x={20} y={78}>From: <tspan fontWeight={600}>{shortLocation(entries[0]?.location_name ?? "")}</tspan></text>
           <text x={20} y={96}>To: <tspan fontWeight={600}>{shortLocation(last?.location_name ?? "")}</tspan></text>
           <text x={20} y={114}>Driver: <tspan fontWeight={600}>{log.driver_name || "—"}</tspan></text>
           <text x={20} y={132}>Carrier: <tspan fontWeight={600}>{log.carrier_name || "—"}</tspan></text>
@@ -232,7 +236,7 @@ export default function LogSheet({ log }: { log: DailyLog }) {
           strokeWidth={1}
         />
         <g transform={`translate(0, ${0})`}>
-          <Remarks entries={log.entries} />
+          <Remarks entries={entries} />
         </g>
 
         {/* Recap */}

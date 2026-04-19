@@ -16,16 +16,23 @@ export default function AddressInput({ label, value, onChange, placeholder }: Pr
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Guard against out-of-order resolutions: if the user keeps typing, a
+    // slow earlier fetch must not overwrite the latest suggestions.
+    let cancelled = false;
     const handler = setTimeout(async () => {
       if (!focused || value.trim().length < 3) {
-        setSuggestions([]);
+        if (!cancelled) setSuggestions([]);
         return;
       }
       const results = await autocompleteAddress(value);
+      if (cancelled) return;
       setSuggestions(results);
       setOpen(results.length > 0);
     }, 300);
-    return () => clearTimeout(handler);
+    return () => {
+      cancelled = true;
+      clearTimeout(handler);
+    };
   }, [value, focused]);
 
   useEffect(() => {
