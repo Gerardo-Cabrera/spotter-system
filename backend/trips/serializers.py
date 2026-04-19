@@ -48,11 +48,17 @@ class TripInputSerializer(serializers.Serializer):
 
 
 class GeocodeResultSerializer(serializers.Serializer):
-    """Single autocomplete suggestion returned by `/api/geocode/`."""
+    """Single autocomplete suggestion returned by `/api/geocode/`.
 
-    display_name = serializers.CharField()
-    latitude = serializers.FloatField()
-    longitude = serializers.FloatField()
+    Field names match the wire format the frontend consumes (`lat` / `lon`)
+    so the OpenAPI schema and the real response stay byte-for-byte identical.
+    """
+
+    display_name = serializers.CharField(
+        help_text="Human-readable address as returned by Nominatim."
+    )
+    lat = serializers.FloatField(help_text="Latitude in decimal degrees (WGS84).")
+    lon = serializers.FloatField(help_text="Longitude in decimal degrees (WGS84).")
 
 
 class GeocodeResponseSerializer(serializers.Serializer):
