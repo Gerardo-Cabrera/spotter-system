@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "drf_spectacular",
     "trips",
 ]
 
@@ -97,6 +98,26 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
     "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# OpenAPI / Swagger UI configuration (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Spotter HOS Trip Planner API",
+    "DESCRIPTION": (
+        "REST API that plans HOS-compliant trips and generates "
+        "Driver's Daily Log sheets. All endpoints are stateless unless "
+        "`save=true` is sent to `/trips/plan/`."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": r"/api/",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+    },
 }
 
 # CORS — list of allowed frontends (Vercel URL, localhost).

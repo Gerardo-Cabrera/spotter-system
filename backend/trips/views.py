@@ -5,13 +5,24 @@ import logging
 from datetime import datetime, timezone as _tz
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+)
 from rest_framework import status as http_status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from timezonefinder import TimezoneFinder
 
 from .models import Trip
-from .serializers import TripInputSerializer, TripSerializer
+from .serializers import (
+    GeocodeResponseSerializer,
+    TripInputSerializer,
+    TripSerializer,
+)
 from .services.geocoding import GeocodingError, autocomplete, geocode
 from .services.hos_planner import (
     DROPOFF_HOURS,
@@ -31,6 +42,41 @@ _TZ_FINDER = TimezoneFinder()
 _DEFAULT_AVERAGE_SPEED_MPH = 55.0
 
 
+@extend_schema(
+    tags=["trips"],
+    summary="Plan a trip and generate daily log sheets",
+    description=(
+        "Geocodes the three addresses, builds a real road route (OSRM with "
+        "ORS fallback), simulates the trip applying FMCSA Hours-of-Service "
+        "rules, and returns the route geometry, required stops, segment "
+        "timeline and FMCSA-style daily log entries. When `save=true` the "
+        "whole plan is persisted and `trip_id` is included in the response."
+    ),
+    request=TripInputSerializer,
+    responses={
+        200: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Trip plan payload (see example).",
+        ),
+        400: OpenApiResponse(description="Validation or geocoding error."),
+        502: OpenApiResponse(description="Upstream routing provider failure."),
+    },
+    examples=[
+        OpenApiExample(
+            "Green Bay → Chicago → Dallas",
+            request_only=True,
+            value={
+                "current_location": "Green Bay, WI",
+                "pickup_location": "Chicago, IL",
+                "dropoff_location": "Dallas, TX",
+                "current_cycle_used_hours": 10,
+                "driver_name": "Ada Lovelace",
+                "carrier_name": "Acme Freight",
+                "save": False,
+            },
+        ),
+    ],
+)
 @api_view(["POST"])
 def plan_trip_view(request):
     serializer = TripInputSerializer(data=request.data)
@@ -161,12 +207,41 @@ def plan_trip_view(request):
     return Response(payload)
 
 
+@extend_schema(
+    tags=["trips"],
+    summary="Retrieve a persisted trip plan",
+    responses={
+        200: TripSerializer,
+        404: OpenApiResponse(description="Trip not found."),
+    },
+)
 @api_view(["GET"])
 def get_trip_view(_request, trip_id):
     trip = get_object_or_404(Trip, pk=trip_id)
     return Response(TripSerializer(trip).data)
 
 
+@extend_schema(
+    tags=["geocoding"],
+    summary="Address autocomplete (cached Nominatim proxy)",
+    parameters=[
+        OpenApiParameter(
+            name="q",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="Free-text query to look up.",
+        ),
+        OpenApiParameter(
+            name="limit",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Maximum suggestions to return (default 5).",
+        ),
+    ],
+    responses={200: GeocodeResponseSerializer},
+)
 @api_view(["GET"])
 def geocode_view(request):
     query = request.query_params.get("q", "")
