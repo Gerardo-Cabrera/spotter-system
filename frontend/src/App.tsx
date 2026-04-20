@@ -4,6 +4,7 @@ import TripForm from "./components/TripForm";
 import RouteMap from "./components/RouteMap";
 import LogSheet from "./components/LogSheet";
 import TripSummary from "./components/TripSummary";
+import Itinerary from "./components/Itinerary";
 import { planTrip } from "./api";
 import type { TripInput, TripPlan } from "./types";
 
@@ -69,6 +70,7 @@ export default function App() {
             <>
               <TripSummary plan={plan} />
               <RouteMap geometry={plan.route_geometry} stops={plan.stops} />
+              <Itinerary stops={plan.stops} timezone={plan.timezone} />
               <div>
                 <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Daily log sheets ({plan.daily_logs.length})

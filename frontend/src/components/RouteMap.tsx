@@ -37,6 +37,39 @@ function stopIcon(kind: Stop["kind"]) {
   });
 }
 
+const LEGEND_ENTRIES: { kind: Stop["kind"]; label: string }[] = [
+  { kind: "start", label: "Start" },
+  { kind: "pickup", label: "Pickup" },
+  { kind: "dropoff", label: "Drop-off" },
+  { kind: "fuel", label: "Fuel" },
+  { kind: "break", label: "Break" },
+  { kind: "rest", label: "Rest" },
+];
+
+function MapLegend() {
+  return (
+    <div className="absolute top-3 right-3 z-[400] bg-white/95 backdrop-blur rounded-lg border border-slate-200 shadow-md px-3 py-2 text-xs">
+      <div className="font-semibold text-slate-500 uppercase tracking-wide mb-1.5 text-[10px]">
+        Legend
+      </div>
+      <ul className="space-y-1">
+        {LEGEND_ENTRIES.map(({ kind, label }) => (
+          <li key={kind} className="flex items-center gap-2">
+            <span
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+              style={{ background: KIND_COLORS[kind] }}
+              aria-hidden
+            >
+              {KIND_GLYPHS[kind]}
+            </span>
+            <span className="text-slate-700">{label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
@@ -58,7 +91,8 @@ export default function RouteMap({ geometry, stops }: Props) {
     : [39.8283, -98.5795];
 
   return (
-    <div className="h-[520px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+    <div className="relative h-[520px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+      <MapLegend />
       <MapContainer center={center} zoom={5} scrollWheelZoom>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
