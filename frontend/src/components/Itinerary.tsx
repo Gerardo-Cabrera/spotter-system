@@ -42,6 +42,16 @@ function formatTime(iso: string | undefined, timezone: string): string {
 export default function Itinerary({ stops, timezone }: Props) {
   if (!stops.length) return null;
 
+  // The backend already sorts chronologically (see `_extract_stops` in
+  // trips/views.py), but we re-sort here as a defense-in-depth pass:
+  // - A stable sort keeps deterministic order on `at` ties.
+  // - Stops without `at` sink to the tail.
+  // - Using the original index as tie-breaker prevents render reshuffles.
+  const ordered = stops
+    .map((s, idx) => ({ s, idx, t: s.at ? Date.parse(s.at) : Number.POSITIVE_INFINITY }))
+    .sort((a, b) => a.t - b.t || a.idx - b.idx)
+    .map(({ s }) => s);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-4">
@@ -52,7 +62,7 @@ export default function Itinerary({ stops, timezone }: Props) {
       </div>
 
       <ol className="relative space-y-3 before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
-        {stops.map((s, i) => {
+        {ordered.map((s, i) => {
           const meta = KIND_META[s.kind];
           return (
             <li key={`${s.kind}-${i}`} className="relative flex gap-3 items-start">
