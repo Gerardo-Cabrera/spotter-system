@@ -7,6 +7,12 @@ services:
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput"
     startCommand: "gunicorn spotter.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
     envVars:
+      # Pin Python so the build is reproducible. Without this, Render
+      # follows its own default (currently Python 3.14), which lacks
+      # binary wheels for our native deps (h3 via timezonefinder,
+      # psycopg-binary pre-3.2.10, etc.) and forces source builds.
+      - key: PYTHON_VERSION
+        value: "3.12.7"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG
