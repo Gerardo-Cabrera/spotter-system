@@ -9,8 +9,8 @@ export async function planTrip(input: TripInput): Promise<TripPlan> {
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    const detail = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(detail.detail ?? "Failed to plan trip");
+    const body = await res.json().catch(() => null);
+    throw new Error(extractErrorMessage(body, res.statusText));
   }
   return res.json();
 }
@@ -21,4 +21,28 @@ export async function autocompleteAddress(q: string): Promise<{ display_name: st
   if (!res.ok) return [];
   const data = await res.json();
   return data.results ?? [];
+}
+
+/**
+ * Produce a human-readable error from a DRF response body.
+ *
+ * DRF returns two shapes depending on the failure mode:
+ *   - exception-style:   { "detail": "Upstream routing provider failed..." }
+ *   - validation-style:  { "current_location": ["This field may not be blank."] }
+ *
+ * The previous implementation only honoured the first shape, so validation
+ * errors degraded to a generic "Failed to plan trip". Now we surface the
+ * first field-level message whenever `detail` is absent.
+ */
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") return fallback || "Failed to plan trip";
+  const obj = body as Record<string, unknown>;
+  if (typeof obj.detail === "string") return obj.detail;
+  for (const [field, value] of Object.entries(obj)) {
+    if (Array.isArray(value) && value.length && typeof value[0] === "string") {
+      return `${field}: ${value[0]}`;
+    }
+    if (typeof value === "string") return `${field}: ${value}`;
+  }
+  return fallback || "Failed to plan trip";
 }
