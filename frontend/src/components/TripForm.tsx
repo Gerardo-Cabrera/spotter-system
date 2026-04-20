@@ -88,7 +88,18 @@ export default function TripForm({ loading, onSubmit }: Props) {
           <input
             type="datetime-local"
             value={departureLocal}
-            onChange={(e) => setDepartureLocal(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDepartureLocal(v);
+              // Native pickers on Chromium / WebKit stay open after a
+              // selection. Once the user has committed a full
+              // `YYYY-MM-DDTHH:mm` value, blur the input so the overlay
+              // dismisses itself. Partial edits (date only, no time yet)
+              // keep focus.
+              if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) {
+                e.target.blur();
+              }
+            }}
             className="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm"
           />
         </div>
