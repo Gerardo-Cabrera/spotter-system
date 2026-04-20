@@ -250,9 +250,27 @@ def geocode_view(request):
 
 
 def _extract_stops(segments, waypoints, route) -> list[dict]:
-    """Produce a compact list of notable stops for the map layer."""
+    """Produce a compact list of notable stops for the map + itinerary.
+
+    Every stop carries ``at`` (ISO-8601 UTC) so the frontend timeline can
+    render a full chronological view without falling back to '—' on the
+    anchor stops (start / pickup / dropoff).
+    """
     stops: list[dict] = []
-    # Always include the start and the explicit waypoints.
+
+    # Look up the first segment that matches each waypoint's label so we can
+    # annotate the pickup / dropoff stops with their actual arrival time.
+    wp_time_by_label: dict[str, str] = {}
+    for seg in segments:
+        if seg.note in wp_time_by_label:
+            continue
+        for wp in waypoints:
+            if seg.note == wp.label:
+                wp_time_by_label[wp.label] = seg.start.isoformat()
+                break
+
+    start_iso = segments[0].start.isoformat() if segments else None
+
     if route.geometry:
         stops.append(
             {
@@ -260,6 +278,7 @@ def _extract_stops(segments, waypoints, route) -> list[dict]:
                 "label": "Current location",
                 "lat": route.geometry[0][0],
                 "lon": route.geometry[0][1],
+                "at": start_iso,
             }
         )
     for wp in waypoints:
@@ -270,6 +289,7 @@ def _extract_stops(segments, waypoints, route) -> list[dict]:
                 "lat": wp.lat,
                 "lon": wp.lon,
                 "location_name": wp.location_name,
+                "at": wp_time_by_label.get(wp.label),
             }
         )
 
