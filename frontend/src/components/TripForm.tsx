@@ -17,6 +17,11 @@ const EXAMPLE: TripInput = {
 
 export default function TripForm({ loading, onSubmit }: Props) {
   const [form, setForm] = useState<TripInput>(EXAMPLE);
+  // The <input type="datetime-local"> element only accepts values in the
+  // `YYYY-MM-DDTHH:mm` format (no timezone, no seconds). We keep that raw
+  // local string here and convert it to an ISO-8601 UTC string only at
+  // submit time, so the control keeps displaying whatever the user picks.
+  const [departureLocal, setDepartureLocal] = useState<string>("");
 
   const update = <K extends keyof TripInput>(k: K, v: TripInput[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
@@ -24,7 +29,10 @@ export default function TripForm({ loading, onSubmit }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.current_location || !form.pickup_location || !form.dropoff_location) return;
-    onSubmit(form);
+    onSubmit({
+      ...form,
+      departure_time: departureLocal ? new Date(departureLocal).toISOString() : undefined,
+    });
   };
 
   return (
@@ -79,10 +87,8 @@ export default function TripForm({ loading, onSubmit }: Props) {
           </label>
           <input
             type="datetime-local"
-            value={form.departure_time ?? ""}
-            onChange={(e) =>
-              update("departure_time", e.target.value ? new Date(e.target.value).toISOString() : undefined)
-            }
+            value={departureLocal}
+            onChange={(e) => setDepartureLocal(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm"
           />
         </div>
