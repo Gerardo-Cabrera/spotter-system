@@ -310,4 +310,13 @@ def _extract_stops(segments, waypoints, route) -> list[dict]:
                     "at": seg.start.isoformat(),
                 }
             )
+
+    # Sort chronologically. The previous layout (start, waypoints, then
+    # segment-derived stops) could surface a fuel stop after the dropoff even
+    # if it happens mid-route. Python's sort is stable, so stops that share
+    # an `at` (or both miss it) keep their insertion order — deterministic
+    # output. Missing timestamps are pushed to the tail; in the current
+    # implementation every stop carries one, but this keeps the helper safe
+    # if a future code path ever emits one without.
+    stops.sort(key=lambda s: (s.get("at") is None, s.get("at") or ""))
     return stops

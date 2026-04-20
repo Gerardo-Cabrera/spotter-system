@@ -69,3 +69,29 @@ def test_start_stop_matches_first_segment_start():
 
     start = next(s for s in stops if s["kind"] == "start")
     assert start["at"] == plan.segments[0].start.isoformat()
+
+
+def test_stops_are_returned_in_chronological_order():
+    """Regression: a long trip inserts a fuel stop mid-route; it must
+    appear before the dropoff in the returned list, not after.
+    """
+    # 1500 mi forces at least one fuel stop at ~1000 mi, well before the
+    # dropoff. Before the sort fix, the fuel stop was appended at the tail
+    # of the list because _extract_stops emitted waypoints first.
+    plan, waypoints, route = _build_plan_and_route(
+        total_miles=1500, miles_to_pickup=100, speed=55
+    )
+    stops = _extract_stops(plan.segments, waypoints, route)
+
+    times = [datetime.fromisoformat(s["at"]) for s in stops]
+    assert times == sorted(times), (
+        f"stops are not chronological: {[(s['kind'], s['at']) for s in stops]}"
+    )
+
+    # And specifically: at least one fuel stop sits strictly between
+    # pickup and dropoff in the list.
+    kinds = [s["kind"] for s in stops]
+    pickup_idx = kinds.index("pickup")
+    dropoff_idx = kinds.index("dropoff")
+    assert pickup_idx < dropoff_idx
+    assert "fuel" in kinds[pickup_idx:dropoff_idx]
