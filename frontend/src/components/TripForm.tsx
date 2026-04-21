@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Navigation } from "lucide-react";
 import AddressInput from "./AddressInput";
+import DateTimePicker from "./DateTimePicker";
 import type { TripInput } from "../types";
 
 interface Props {
@@ -17,10 +18,9 @@ const EXAMPLE: TripInput = {
 
 export default function TripForm({ loading, onSubmit }: Props) {
   const [form, setForm] = useState<TripInput>(EXAMPLE);
-  // The <input type="datetime-local"> element only accepts values in the
-  // `YYYY-MM-DDTHH:mm` format (no timezone, no seconds). We keep that raw
-  // local string here and convert it to an ISO-8601 UTC string only at
-  // submit time, so the control keeps displaying whatever the user picks.
+  // `DateTimePicker` uses the same `YYYY-MM-DDTHH:mm` format the native
+  // input does, so we keep the raw local string in state and convert to an
+  // ISO-8601 UTC string only at submit time.
   const [departureLocal, setDepartureLocal] = useState<string>("");
 
   const update = <K extends keyof TripInput>(k: K, v: TripInput[K]) =>
@@ -85,22 +85,10 @@ export default function TripForm({ loading, onSubmit }: Props) {
           <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">
             Departure (optional)
           </label>
-          <input
-            type="datetime-local"
+          <DateTimePicker
             value={departureLocal}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDepartureLocal(v);
-              // Native pickers on Chromium / WebKit stay open after a
-              // selection. Once the user has committed a full
-              // `YYYY-MM-DDTHH:mm` value, blur the input so the overlay
-              // dismisses itself. Partial edits (date only, no time yet)
-              // keep focus.
-              if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) {
-                e.target.blur();
-              }
-            }}
-            className="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm"
+            onChange={setDepartureLocal}
+            placeholder="Pick a date and time"
           />
         </div>
       </div>
